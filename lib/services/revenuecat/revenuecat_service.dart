@@ -1,0 +1,3 @@
+class RevenueCatService {
+  const RevenueCatService();
+}

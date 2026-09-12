@@ -1,0 +1,3 @@
+class DecisionEngineService {
+  const DecisionEngineService();
+}
