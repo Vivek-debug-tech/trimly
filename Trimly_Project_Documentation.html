@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Trimly - Project Engineering Documentation</title>
+<style>
+@page { size: A4; margin: 18mm 16mm; }
+:root { color: #17211b; font-family: "Segoe UI", Arial, sans-serif; }
+body { line-height: 1.45; font-size: 10.5pt; }
+h1 { color: #0b5d51; font-size: 26pt; margin-bottom: 4pt; }
+h2 { color: #0b5d51; border-bottom: 1px solid #b7d8cf; padding-bottom: 4pt; margin-top: 22pt; }
+h3 { color: #24483f; margin-top: 15pt; }
+.subtitle { color: #5c6b64; font-size: 13pt; margin-bottom: 25pt; }
+code, pre { font-family: Consolas, monospace; }
+pre { background: #f0f5f2; border-left: 4px solid #0b5d51; padding: 10pt; }
+table { border-collapse: collapse; width: 100%; margin: 8pt 0 14pt; }
+th { background: #0b5d51; color: white; text-align: left; }
+th, td { border: 1px solid #cbd8d2; padding: 6pt 8pt; }
+tr:nth-child(even) { background: #f4f8f6; }
+.callout { background: #eef7f4; border: 1px solid #b7d8cf; padding: 10pt 12pt; }
+.page-break { break-before: page; }
+ul { margin-top: 4pt; }
+</style>
+</head>
+<body>
+<h1>Trimly - Project Engineering Documentation</h1>
+<div class="subtitle">Historical engineering record | Phases 1-3 | 12 September 2026</div>
+<h2>Project Overview</h2>
+<p>Trimly is a Flutter application foundation for subscription review and savings workflows. The architecture is intentionally staged. Domain decisions are kept independent from Flutter UI, Hive persistence, RevenueCat, notifications, and future optimizer work.</p>
+<h2>Phase History</h2>
+<ul><li>Phase 1 - Flutter project foundation and frozen architecture scaffold</li><li>Phase 2 - Domain data models and Hive persistence foundation</li><li>Phase 3 - Decision Engine scoring and classification</li></ul>
+<h2>Phase 1 - Flutter Foundation</h2>
+<h3>Objective</h3><p>Prepare a compiling Flutter project foundation without implementing product screens, integrations, or business behavior.</p>
+<h3>Implemented</h3>
+<ul><li>Flutter and Dart project bootstrap named Trimly.</li><li>Riverpod application scope.</li><li>App shell, router placeholder, theme placeholder, and frozen architecture directories.</li><li>Placeholder boundaries for RevenueCat and notifications without integrating either service.</li><li>Hive, Hive Flutter, Shared Preferences, Riverpod, Hive Generator, and Build Runner dependencies.</li><li>Trimly branding in the application shell and platform metadata.</li></ul>
+<h3>Intentionally Not Implemented</h3><p>Home UI, subscription screens, Value Check, Savings Mission, Optimizer, RevenueCat, notifications, Decision Engine logic, AI/ML, backend, authentication, bank integrations, and Gmail integrations.</p>
+<h3>Validation</h3><ul><li><code>flutter pub get</code>: passed.</li><li><code>dart analyze</code>: passed.</li><li><code>flutter test</code>: passed.</li><li>Chrome launch: passed.</li><li>Windows launch was blocked by the host's missing Visual Studio C++ toolchain.</li></ul>
+<h2>Phase 2 - Domain Models and Hive Persistence</h2>
+<h3>Objective</h3><p>Implement the frozen subscription data model, strongly typed enums, explicit Hive persistence metadata, and concrete repository CRUD operations.</p>
+<h3>Implemented</h3><ul><li><code>Subscription</code> model with the specified fields only.</li><li>Strongly typed UsageFrequency, Importance, DecisionStatus, BillingCycle, and SavingsAction enums.</li><li>Generated Hive adapters with explicit type IDs.</li><li>Shared adapter registration and Subscription box name.</li><li>Concrete <code>SubscriptionRepository</code> with persistence-only get, add, update, delete, and clear operations.</li></ul>
+<h3>Hive IDs and Subscription Field Indices</h3>
+<table><tr><th>Type</th><th>Hive type ID</th></tr><tr><td>UsageFrequency</td><td>0</td></tr><tr><td>Importance</td><td>1</td></tr><tr><td>DecisionStatus</td><td>2</td></tr><tr><td>BillingCycle</td><td>3</td></tr><tr><td>SavingsAction</td><td>4</td></tr><tr><td>Subscription</td><td>10</td></tr></table>
+<p><code>Subscription</code> uses explicit <code>@HiveField</code> indices <code>0</code> through <code>14</code>. Nullable fields are <code>DateTime? trialEndDate</code>, <code>double? postTrialPrice</code>, <code>UsageFrequency? usageFrequency</code>, <code>Importance? importance</code>, and <code>double? impactScore</code>.</p>
+<h3>Tests and Limitation</h3><p>Phase 2 tests use a temporary filesystem Hive directory and real opened boxes. They cover creation, nullable fields, enum persistence, Subscription round trips, CRUD, delete, and clear-all. Adapter registration was verified before box opening in tests; production Hive startup wiring was intentionally deferred.</p>
+<h2 class="page-break">PHASE 3 - DECISION ENGINE</h2>
+<h3>Phase Objective</h3><p>Implement the single source of truth for Impact Score calculation, KEEP/REVIEW/CUT classification, and NOT ENOUGH INFO handling. The optimizer, UI, RevenueCat, and notifications remain out of scope.</p>
+<h3>What Was Implemented</h3><ul><li><code>DecisionEngineService</code> in <code>lib/domain/engines/decision_engine_service.dart</code>.</li><li><code>DecisionEngineResult</code> containing <code>impactScore</code> and <code>decisionStatus</code>.</li><li>Pure evaluation from UsageFrequency and Importance.</li><li>Subscription evaluation that reads only usage and importance.</li><li>Fixed normalization helpers and deterministic threshold classification.</li></ul>
+<h3>Responsibility and Formula</h3><p>The service owns calculation and classification. It does not access Hive, prices, trial prices, dates, RevenueCat, notifications, UI state, or external services.</p><pre>Impact Score = (0.40 x normalized usage) + (0.60 x normalized importance)</pre><p>Cost is not an input. No price, post-trial price, monthly cost, annual cost, or savings amount is read during scoring.</p>
+<h3>Usage Normalization</h3><table><tr><th>UsageFrequency</th><th>Value</th></tr><tr><td>daily</td><td>1.0</td></tr><tr><td>severalPerWeek</td><td>0.8</td></tr><tr><td>weekly</td><td>0.6</td></tr><tr><td>monthly</td><td>0.4</td></tr><tr><td>rarely</td><td>0.2</td></tr><tr><td>never</td><td>0.0</td></tr></table>
+<h3>Importance Normalization</h3><table><tr><th>Importance</th><th>Value</th></tr><tr><td>high</td><td>1.0</td></tr><tr><td>medium</td><td>0.5</td></tr><tr><td>low</td><td>0.0</td></tr></table>
+<h3>Classification Thresholds</h3><table><tr><th>Impact Score</th><th>DecisionStatus</th></tr><tr><td><code>&gt;= 0.70</code></td><td>KEEP</td></tr><tr><td><code>&gt;= 0.40</code> and <code>&lt; 0.70</code></td><td>REVIEW</td></tr><tr><td><code>&lt; 0.40</code></td><td>CUT</td></tr></table>
+<h3>NOT ENOUGH INFO</h3><div class="callout">If usage frequency or importance is missing, the service returns <code>impactScore = null</code> and <code>decisionStatus = notEnoughInfo</code>. It never substitutes a default value.</div>
+<h3>Tests and Validation</h3><p><code>test/domain/engines/decision_engine_service_test.dart</code> covers all usage values, all importance values, representative formulas, both threshold boundaries, all missing-data combinations, and independence from <code>price</code> and <code>postTrialPrice</code>.</p><ul><li><code>flutter pub get</code>: passed.</li><li><code>dart analyze</code>: passed.</li><li><code>flutter test</code>: passed.</li><li>Focused Decision Engine tests: 11 passed.</li></ul>
+<h3>Not Implemented</h3><p>Savings optimizer subset search, candidate selection, overshoot logic, cancellation minimization, tie-breaking, alternatives, Savings Mission, UI, RevenueCat, notifications, and persistence updates.</p>
+<h3>Architectural Decisions and Rationale</h3><ul><li>The service is deterministic and side-effect free.</li><li>The scoring formula exists in one place only.</li><li>Cost remains outside Impact Score.</li><li>Missing data is represented explicitly as NOT ENOUGH INFO.</li><li>No arbitrary rounding is applied.</li><li>The immutable Subscription model is not mutated; evaluation returns a result.</li></ul>
+<h3>Known Limitations</h3><p>Production startup does not yet initialize Hive or open the Subscription box. Applying engine results to persisted Subscription records belongs to a later integration phase.</p>
+<h3>How to explain this phase</h3><p>Trimly now has one small calculator that decides how much a subscription matters. It converts usage and importance into fixed numbers, combines them using the frozen 40/60 formula, and labels the result KEEP, REVIEW, or CUT. If either answer is missing, it refuses to guess and returns NOT ENOUGH INFO. Prices are deliberately ignored, so the score measures value and importance rather than cost. The calculator has no UI or database dependency, which makes the rules predictable and easy to test.</p>
+</body>
+</html>
