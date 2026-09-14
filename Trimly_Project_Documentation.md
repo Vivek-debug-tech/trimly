@@ -9,6 +9,10 @@ Trimly is a Flutter application foundation for subscription review and savings w
 - Phase 1 - Flutter project foundation and frozen architecture scaffold
 - Phase 2 - Domain data models and Hive persistence foundation
 - Phase 3 - Decision Engine scoring and classification
+- Phase 4 - Optimizer, baseline, and alternatives
+- Currency & Internationalization Amendment v1 - approved and frozen
+- Phase 5 UI/UX Specification - frozen handoff
+- Phase 5A - UserSettings and currency foundation
 
 ## Phase 1 - Flutter Foundation
 
@@ -253,3 +257,240 @@ The optimizer remains pure domain logic and does not mutate Subscription records
 - `dart analyze`: passed.
 - `flutter test`: passed.
 - Focused Phase 4 optimizer tests: 24 passed.
+
+## CURRENCY & INTERNATIONALIZATION AMENDMENT v1
+
+**STATUS: APPROVED**  
+**VERSION: v1**  
+**STATUS AFTER UPDATE: FROZEN**
+
+### Currency Model
+
+Trimly supports one selected currency per user. Currency is a user-level setting, not an independently configurable Subscription field. This amendment changes the currency boundary only; it does not change Decision Engine or Optimizer business logic.
+
+The future `UserSettings` model owns the active currency. Subscriptions use the user's selected currency. Mixed currencies for one user are invalid. No currency conversion, exchange-rate API, Geo-IP detection, location tracking, or full ISO country database is permitted.
+
+### Country Selection
+
+Country selection may provide a small local default mapping, such as India to INR, United States to USD, United Kingdom to GBP, European countries to EUR, Japan to JPY, Canada to CAD, Australia to AUD, and Singapore to SGD. The user may confirm or change the suggested currency where the UI allows it.
+
+### Preserved Decision Engine and Optimizer Rules
+
+Impact Score remains `(0.40 x normalized usage) + (0.60 x normalized importance)`. Currency does not influence Impact Score. The Optimizer continues to use the selected currency, REVIEW/CUT candidates, the hard target constraint, impact-first ranking, cancellation count, overshoot, deterministic ID fallback, and the existing billing normalization:
+
+- weekly: `price / 0.25`
+- monthly: `price`
+- quarterly: `price / 3`
+- yearly: `price / 12`
+
+Active trials continue to use `postTrialPrice`; trials without it remain visible but are not optimizer savings candidates. No conversion occurs.
+
+### Locale-Aware Display and Savings Mission
+
+Future UI must format amounts with locale-aware tooling, preferably `intl`, rather than manual symbol concatenation. User-level settings will contain country and currency, and Savings Mission targets, Optimizer amounts, alternatives, renewal displays, trial displays, and milestones will use the selected currency. Milestones require a small deterministic local currency configuration and must not reuse INR values blindly across currencies.
+
+### Approved Non-Changes
+
+This documentation amendment does not implement UserSettings, country or currency pickers, locale formatting, persistence, Subscription schema changes, Decision Engine changes, Optimizer changes, Hive changes, repositories, UI, RevenueCat, notifications, exchange rates, or currency conversion.
+
+## PHASE 5 UI/UX SPECIFICATION
+
+**STATUS: FROZEN**
+
+### CURRENCY & INTERNATIONALIZATION
+
+Trimly is globally usable while maintaining one active currency per user.
+
+- Country selection provides a default currency.
+- Currency is confirmed or selected at user level and persisted through the future UserSettings boundary.
+- Subscription prices use the selected currency.
+- Amounts are locale-aware.
+- No currency conversion or exchange-rate API exists.
+- Currency does not affect Impact Score or Optimizer ranking.
+- Savings Mission, Optimizer, alternatives, renewal/trial displays, and milestones show the selected currency.
+- The UI must not imply that Trimly converts currencies.
+
+The future flow is: Country Selection -> Default Currency -> User Confirmation or Selection -> UserSettings -> Currency-aware UI. The country lookup is a small local mapping with no Geo-IP, tracking, full ISO database, or external API.
+
+### Currency-Aware Surfaces
+
+Phase 5 must design currency-aware onboarding, Home totals, Savings Mission target/progress, Optimizer target/savings/overshoot/recommendations, alternatives, renewal/trial displays, milestone displays, and the Obvious Guess versus Trimly Recommendation comparison. The product story remains unchanged: the obvious guess favors expensive subscriptions, while Trimly recommends the lowest-impact combination that reaches the target.
+
+### Explicit Non-Goals
+
+This specification does not authorize UserSettings implementation, country/currency picker UI, `intl` integration, currency persistence, Subscription schema changes, exchange-rate APIs, conversion, RevenueCat, notifications, payment flow, or new business logic.
+
+### Documentation Artifacts
+
+- `Currency_Internationalization_Amendment_v1.md`
+- `Phase_5_UI_UX_Specification.md`
+
+## PHASE 5A - USER SETTINGS + CURRENCY FOUNDATION
+
+### Objective
+
+Provide the future UI with one authoritative user-level country and currency state, local persistence, deterministic country defaults, and locale-aware display formatting without changing Phase 1-4 business logic.
+
+### Implemented
+
+- Typed `Country` and `Currency` configurations with the approved MVP mapping.
+- `UserSettings` containing only `country` and `currency`.
+- `UserSettingsRepository` backed by SharedPreferences.
+- Deterministic default settings: India and INR when nothing is saved.
+- Riverpod `userSettingsProvider` and `UserSettingsController` as the single state source.
+- `CurrencyFormatter` using `intl` and locale metadata from the typed Currency values.
+
+### Supported Country Defaults
+
+| Country | Currency | Locale |
+| --- | --- | --- |
+| India | INR | `en_IN` |
+| United States | USD | `en_US` |
+| United Kingdom | GBP | `en_GB` |
+| European Union | EUR | `de_DE` |
+| Japan | JPY | `ja_JP` |
+| Canada | CAD | `en_CA` |
+| Australia | AUD | `en_AU` |
+| Singapore | SGD | `en_SG` |
+
+### Persistence and Formatting
+
+Country and currency enum names are stored using concrete SharedPreferences keys. Missing values use the deterministic India/INR defaults. Formatting delegates to `intl`; it does not convert currencies or alter subscription, Impact Score, billing, or Optimizer calculations. JPY uses zero fractional digits; the other supported currencies use two.
+
+### Subscription Compatibility Decision
+
+The existing Phase 2 `Subscription.currency` field and Hive schema were inspected and left unchanged. UserSettings is now the authoritative active-currency foundation for future UI and user-level behavior. No per-subscription currency feature was added, and no migration was attempted.
+
+### Tests and Validation
+
+`test/features/user_settings_test.dart` contains 12 focused tests covering model creation, country defaults, SharedPreferences persistence and recreation, user-level currency, INR/USD/GBP/EUR/JPY formatting, no conversion, deterministic defaults, and Riverpod state access.
+
+- `flutter pub get`: passed.
+- `dart analyze`: passed.
+- `flutter test`: passed, including all previous Phase 1-4 tests.
+
+### Files Created or Changed
+
+- `lib/core/enums/country.dart`
+- `lib/core/enums/currency.dart`
+- `lib/domain/models/user_settings.dart`
+- `lib/data/repositories/user_settings_repository.dart`
+- `lib/services/user_settings/user_settings_provider.dart`
+- `lib/core/utils/currency_formatter.dart`
+- `test/features/user_settings_test.dart`
+- `pubspec.yaml` and `pubspec.lock` (`intl` dependency)
+
+### Explicit Non-Goals
+
+No UI, UserSettings screen, country picker, currency picker, currency conversion, exchange-rate API, RevenueCat, notifications, milestone logic, Subscription schema change, Decision Engine change, Optimizer change, or Phase 5B work was implemented.
+
+## PHASE 5 SPECIFICATION CLARIFICATION
+
+### Mentor Clarification Incorporated
+
+1. `UserSettings.currency` is the single source of truth for the user's active currency.
+2. Currency is selected during onboarding and locked after onboarding for the MVP.
+3. UI must use `userSettingsProvider` and the shared `CurrencyFormatter`.
+
+### Currency State and Formatting Contract
+
+The authoritative flow is:
+
+```text
+UserSettings.currency
+	-> userSettingsProvider
+	-> shared CurrencyFormatter
+	-> all monetary UI
+```
+
+Every monetary surface, including Home, subscription cards, Renewal Radar, Value Check, Savings Mission, Optimizer, Alternatives, milestones, demos, and future screens, must consume the current UserSettings currency through this shared path. UI must not maintain its own currency state, cache an independent symbol, hardcode currency symbols, implement formatting logic, create another currency provider, or pass a permanently cached currency value between screens.
+
+Currency is selected during onboarding and locked after onboarding for normal MVP usage. Currency changes, migration, historical conversion, exchange-rate logic, and a change-currency workflow are out of scope. This prevents a stored numeric value such as `649` from being misleadingly displayed as another currency without conversion.
+
+### Domain and Presentation Boundary
+
+**Domain:** Decision Engine and Optimizer operate on numeric monetary values.  
+**Presentation:** `CurrencyFormatter` creates locale-aware display strings using the current `UserSettings.currency`.
+
+There is no conversion between currencies. Currency does not affect Impact Score or Optimizer ranking.
+
+### Explicit Phase 5 Screen Currency Requirements
+
+- **HOME:** total recurring spend, renewal amounts, and savings use the selected currency.
+- **VALUE CHECK:** subscription prices use the selected currency; decision explanations remain unchanged.
+- **SAVINGS MISSION:** targets use the selected currency, for example `₹1,000/month`, `$50/month`, or `£50/month`, with no conversion.
+- **OPTIMIZER:** recommended savings and subscription amounts use the selected currency; decision logic remains unchanged.
+- **ALTERNATIVES:** all savings amounts use the selected currency.
+- **RENEWAL RADAR:** renewal amounts use the selected currency.
+- **TRIALS:** post-trial prices use the selected currency.
+
+### UI Developer Contract
+
+The UI developer must consume `userSettingsProvider`, the existing UserSettings state, and the shared `CurrencyFormatter`. The UI developer must not create another currency state source, hardcode currency symbols, manually format amounts, or modify `DecisionEngineService` or `OptimizerService` for currency symbols. Currency remains a presentation concern.
+
+### Final Documentation Status
+
+Currency & Internationalization Amendment v1  
+**STATUS: FROZEN**
+
+Phase 5 UI/UX Specification  
+**STATUS: FROZEN**
+
+## PHASE 5 VISUAL DESIGN SPECIFICATION
+
+**STATUS: FROZEN**
+
+### Mentor Decisions Incorporated
+
+Trimly's dominant visual language is premium minimalism: polished, modern, trustworthy, premium, clean, financially serious, and easy to understand. The decision engine and recommendation experience remain the visual focus.
+
+Glassmorphism is restricted to one location: the Optimizer's Obvious Guess to Trimly Recommendation reveal card. It is not permitted across Home, subscription lists, Value Check, Savings Mission, Renewal Radar, Trials, Profile, Settings, or Alternatives.
+
+Real 3D, perspective transforms, parallax, tilt-on-scroll, layered 3D interfaces, and complex 3D animations are prohibited. Premium depth uses elevation, soft shadows, rounded surfaces, spacing, and subtle depth only.
+
+### Optimizer Reveal Animation
+
+The highest-priority animation is the native Flutter transition:
+
+```text
+OBVIOUS GUESS -> REJECTED -> TRIMLY RECOMMENDATION -> WHY
+```
+
+The Obvious Guess appears muted or grayscale, transitions away with an elegant fade, strike-through, slide, or combination, and reveals Trimly's recommendation with the primary accent treatment. The human-readable explanation appears directly underneath in the same experience. The interaction must communicate that Trimly considered user value rather than simply selecting the most expensive subscription.
+
+Secondary animation priorities are Home spend count-up, Optimizer analyzing checklist, standard page/card transitions, Value Check selection feedback, and Savings Mission target interaction. All remain restrained. No particles, flashy effects, continuous animated backgrounds, casino-like celebration, or confetti.
+
+### Frozen Palette
+
+| Role | Color |
+| --- | --- |
+| Deep Teal | `#006064` |
+| Brushed Steel | `#90A4AE` |
+| Vibrant Amber Gold | `#FFB300` |
+
+Brushed Steel is a flat neutral; metallic textures and artificial brushed-metal effects are prohibited.
+
+### Screen Direction
+
+- **HOME:** Premium minimalism; prioritize Spend, Renewal, Value, Savings, and Action with only subtle count-up motion.
+- **VALUE CHECK:** Clean cards and subtle scale/state feedback with human-readable decisions.
+- **SAVINGS MISSION:** Responsive but restrained target setting; calm fade, scale, or badge milestone feedback without confetti.
+- **OPTIMIZER:** Strongest treatment only for Obvious Guess, transition, Trimly Recommendation, and reason; the rest stays clean.
+- **ALTERNATIVES:** Clean comparison/list with the primary recommendation dominant.
+- **RENEWAL RADAR:** Minimal timeline/list using hierarchy and spacing.
+- **TRIALS:** Minimal warning-oriented status, post-trial price, renewal timing, and action.
+- **PROFILE / SETTINGS:** Simple premium-minimal UI without broad glass or 3D effects.
+
+### Performance and Non-Goals
+
+Avoid unnecessary `BackdropFilter`, simultaneous blur layers, expensive continuous animations, complex 3D transforms, unnecessary custom painters, and animated backgrounds. The Optimizer reveal must remain smooth on a normal mid-range Android device.
+
+Do not add heavy glassmorphism, full-screen 3D, parallax, tilt interactions, particle systems, confetti, animated backgrounds, generic Lottie, unnecessary Rive, metallic textures, or new gamification mechanics.
+
+### Final Status
+
+Currency & Internationalization Amendment v1  
+**STATUS: FROZEN**
+
+Phase 5 UI/UX Specification  
+**STATUS: FROZEN**
