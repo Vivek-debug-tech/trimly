@@ -177,3 +177,79 @@ Production startup does not yet initialize Hive or open the Subscription box. Th
 ## How to explain this phase
 
 Trimly now has one small calculator that decides how much a subscription matters. It converts usage and importance into fixed numbers, combines them using the frozen 40/60 formula, and labels the result KEEP, REVIEW, or CUT. If either answer is missing, it refuses to guess and returns NOT ENOUGH INFO. Prices are deliberately ignored, so the score measures value and importance rather than cost. The calculator has no UI or database dependency, which makes the rules predictable and easy to test.
+
+## PHASE 4 - OPTIMIZER
+
+### What Was Implemented
+
+- Domain-only `OptimizerService` using exhaustive subset search.
+- Separate `NaiveBaselineService` representing expensive-first cancellation.
+- `MonthlySavingsCalculator` for INR monthly-equivalent savings.
+- Immutable `OptimizerPlan`, `OptimizerResult`, `NaiveBaselineResult`, and `OptimizerExplanation` models.
+- Alternatives from the same exhaustive search, ranked deterministically.
+- Trial savings based on `postTrialPrice`.
+
+### Optimizer Architecture
+
+The optimizer consumes existing `Subscription` values and their `impactScore` and `decisionStatus`. It does not access Flutter, Hive, repositories, RevenueCat, notifications, or the Decision Engine's scoring internals. Impact Score is never recalculated.
+
+### Candidate Filtering
+
+Only `DecisionStatus.review` and `DecisionStatus.cut` subscriptions enter the optimizer search. KEEP, NOT ENOUGH INFO, null-impact, unsupported-currency, invalid-price, and trial-without-`postTrialPrice` subscriptions are excluded. Null impact is not treated as zero.
+
+### Monthly-Equivalent Billing Normalization
+
+The MVP supports INR only. Savings are normalized as follows:
+
+| Billing cycle | Monthly-equivalent savings |
+| --- | --- |
+| weekly | `price / 0.25` |
+| monthly | `price` |
+| quarterly | `price / 3` |
+| yearly | `price / 12` |
+
+Normal subscriptions use `price`. Trial subscriptions use `postTrialPrice`, then apply the billing-cycle conversion. A trial without `postTrialPrice` is excluded.
+
+### Optimization Algorithm and Ranking
+
+The service evaluates every subset of the eligible candidate pool. A subset is valid only when total monthly savings are greater than or equal to the target. Valid plans are ranked by:
+
+1. Lowest total Impact Score.
+2. Fewest cancellations.
+3. Lowest savings overshoot.
+4. Lexicographically smallest stable subscription ID signature.
+
+Target zero returns an empty valid plan. Negative targets are rejected. Impossible targets return no valid plan. The implementation uses exhaustive search because only REVIEW/CUT items participate; the search has `O(N x 2^N)` time complexity and practical use is intended for a small candidate pool.
+
+### Naive Baseline
+
+`NaiveBaselineService` is intentionally separate from Trimly's optimizer. It uses the entire subscription list, including KEEP items, excludes only subscriptions without a valid savings value, sorts by monthly-equivalent savings descending, and greedily selects until the target is reached. It does not use Impact Score, usage, importance, or decision classification.
+
+### Alternatives and Explanation
+
+Alternatives are other valid subsets from the same exhaustive search. They use the same ranking order, contain no duplicates, and have deterministic ordering. Result models expose selected subscriptions, monthly and annualized savings, target, overshoot, impact, cancellation count, explanations, alternatives, and validity for future presentation work without importing UI types.
+
+### Tests
+
+`test/domain/engines/optimizer_service_test.dart` contains 24 tests covering all billing cycles, trial handling, candidate filtering, null impacts, target constraints, ranking and tie-breaks, naive baseline behavior, alternatives, and deterministic output.
+
+### Files Created or Changed
+
+- `lib/domain/models/optimizer_models.dart`
+- `lib/domain/engines/monthly_savings_calculator.dart`
+- `lib/domain/engines/optimizer_service.dart`
+- `test/domain/engines/optimizer_service_test.dart`
+- `Trimly_Project_Documentation.md`
+- `Trimly_Project_Documentation.html`
+- `Trimly_Project_Documentation.pdf`
+
+### Architectural Decisions and Limitations
+
+The optimizer remains pure domain logic and does not mutate Subscription records. INR-only support and the existing `trialEndDate != null` trial marker are used as specified. There is no exchange-rate conversion, UI, payment flow, RevenueCat, notifications, or Savings Mission implementation. Exhaustive search remains exponential, so the expected candidate pool must stay small.
+
+### Validation
+
+- `flutter pub get`: passed.
+- `dart analyze`: passed.
+- `flutter test`: passed.
+- Focused Phase 4 optimizer tests: 24 passed.
