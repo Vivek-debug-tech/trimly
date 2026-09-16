@@ -10,6 +10,7 @@ class TrimlyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Trimly',
+      debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       initialRoute: TrimlyRouter.initialRoute,
       onGenerateRoute: TrimlyRouter.onGenerateRoute,
