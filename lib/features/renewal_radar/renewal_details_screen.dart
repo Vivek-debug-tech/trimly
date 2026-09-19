@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:trimly/core/enums/currency.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:trimly/core/utils/currency_formatter.dart';
 import 'package:trimly/domain/models/subscription.dart';
 import 'package:trimly/features/shared/trimly_components.dart';
+import 'package:trimly/services/user_settings/user_settings_provider.dart';
 
-class RenewalDetailsScreen extends StatelessWidget {
+class RenewalDetailsScreen extends ConsumerWidget {
   const RenewalDetailsScreen({
     super.key,
     required this.subscription,
@@ -12,105 +14,110 @@ class RenewalDetailsScreen extends StatelessWidget {
   final Subscription subscription;
 
   @override
-  Widget build(BuildContext context) {
-    final priceText = subscription.price.toStringAsFixed(0);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settingsAsync = ref.watch(userSettingsProvider);
     final renewalDate =
         '${subscription.nextRenewalDate.day}/${subscription.nextRenewalDate.month}/${subscription.nextRenewalDate.year}';
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7F7),
-      appBar: AppBar(
-        title: const Text('Renewal Details'),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TrimlyCard(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(
-                        Icons.subscriptions_outlined,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            subscription.name,
-                            style: Theme.of(context).textTheme.headlineSmall,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            subscription.category,
-                            style: Theme.of(context).textTheme.bodyLarge,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              TrimlyCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Billing summary',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 16),
-                    _DetailRow(
-                      label: 'Price',
-                      value: Currency.values.firstWhere(
-                            (currency) => currency.name == subscription.currency,
-                            orElse: () => Currency.inr,
-                          ) == Currency.inr
-                          ? '₹$priceText'
-                          : '$priceText ${subscription.currency.toUpperCase()}',
-                    ),
-                    _DetailRow(
-                      label: 'Cycle',
-                      value: subscription.billingCycle.name,
-                    ),
-                    _DetailRow(
-                      label: 'Next renewal',
-                      value: renewalDate,
-                    ),
-                    if (subscription.trialEndDate != null)
-                      _DetailRow(
-                        label: 'Trial ends',
-                        value: '${subscription.trialEndDate!.day}/${subscription.trialEndDate!.month}/${subscription.trialEndDate!.year}',
-                      ),
-                    if (subscription.postTrialPrice != null)
-                      _DetailRow(
-                        label: 'Post-trial price',
-                        value: subscription.postTrialPrice!.toStringAsFixed(0),
-                      ),
-                    _DetailRow(
-                      label: 'Decision',
-                      value: subscription.decisionStatus.name,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+    return settingsAsync.when(
+      data: (settings) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFF5F7F7),
+          appBar: AppBar(
+            title: const Text('Renewal Details'),
           ),
-        ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TrimlyCard(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(
+                            Icons.subscriptions_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                subscription.name,
+                                style: Theme.of(context).textTheme.headlineSmall,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                subscription.category,
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TrimlyCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Billing summary',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 16),
+                        _DetailRow(
+                          label: 'Price',
+                          value: CurrencyFormatter.format(subscription.price, settings.currency),
+                        ),
+                        _DetailRow(
+                          label: 'Cycle',
+                          value: subscription.billingCycle.name,
+                        ),
+                        _DetailRow(
+                          label: 'Next renewal',
+                          value: renewalDate,
+                        ),
+                        if (subscription.trialEndDate != null)
+                          _DetailRow(
+                            label: 'Trial ends',
+                            value: '${subscription.trialEndDate!.day}/${subscription.trialEndDate!.month}/${subscription.trialEndDate!.year}',
+                          ),
+                        if (subscription.postTrialPrice != null)
+                          _DetailRow(
+                            label: 'Post-trial price',
+                            value: CurrencyFormatter.format(subscription.postTrialPrice!, settings.currency),
+                          ),
+                        _DetailRow(
+                          label: 'Decision',
+                          value: subscription.decisionStatus.name,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, stack) => Scaffold(
+        body: Center(child: Text('Unable to load settings: $error')),
       ),
     );
   }

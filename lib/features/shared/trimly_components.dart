@@ -165,10 +165,12 @@ class SubscriptionSummaryCard extends StatelessWidget {
   const SubscriptionSummaryCard({
     super.key,
     required this.subscription,
+    required this.currency,
     this.trailing,
   });
 
   final Subscription subscription;
+  final Currency currency;
   final Widget? trailing;
 
   @override
@@ -210,10 +212,7 @@ class SubscriptionSummaryCard extends StatelessWidget {
                   children: [
                     CurrencyAmount(
                       amount: subscription.price,
-                      currency: Currency.values.firstWhere(
-                        (currency) => currency.name == subscription.currency,
-                        orElse: () => Currency.inr,
-                      ),
+                      currency: currency,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: theme.colorScheme.primary,

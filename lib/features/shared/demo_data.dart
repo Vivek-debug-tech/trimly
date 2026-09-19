@@ -5,6 +5,8 @@ import 'package:trimly/core/enums/importance.dart';
 import 'package:trimly/core/enums/usage_frequency.dart';
 import 'package:trimly/domain/models/subscription.dart';
 
+const demoSavingsTarget = 2500.0;
+
 List<Subscription> demoSubscriptions({Currency currency = Currency.inr}) {
   final now = DateTime.now();
   return [

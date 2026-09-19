@@ -14,7 +14,7 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  Country selectedCountry = Country.india;
+  Country? selectedCountry;
 
   @override
   Widget build(BuildContext context) {
@@ -29,8 +29,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               padding: const EdgeInsets.all(20),
               child: userSettingsAsync.when(
                 data: (settings) {
-                  selectedCountry = settings.country;
-                  final defaultCurrency = selectedCountry.defaultCurrency;
+                  final activeCountry = selectedCountry ?? settings.country;
+                  final defaultCurrency = activeCountry.defaultCurrency;
 
                   return SingleChildScrollView(
                     padding: const EdgeInsets.only(bottom: 18),
@@ -63,7 +63,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                 ),
                                 itemBuilder: (context, index) {
                                   final country = Country.values[index];
-                                  final isSelected = country == selectedCountry;
+                                  final isSelected = country == (selectedCountry ?? settings.country);
                                   return InkWell(
                                     onTap: () => setState(() => selectedCountry = country),
                                     borderRadius: BorderRadius.circular(18),
@@ -149,8 +149,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                 label: 'Continue',
                                 onPressed: () async {
                                   final settings = UserSettings(
-                                    country: selectedCountry,
-                                    currency: selectedCountry.defaultCurrency,
+                                    country: selectedCountry ?? Country.india,
+                                    currency: (selectedCountry ?? Country.india).defaultCurrency,
                                   );
                                   await ref.read(userSettingsProvider.notifier).setSettings(settings);
                                   if (context.mounted) {

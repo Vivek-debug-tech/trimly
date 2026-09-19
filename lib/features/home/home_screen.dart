@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:trimly/core/enums/currency.dart';
-import 'package:trimly/core/enums/decision_status.dart';
 import 'package:trimly/core/utils/currency_formatter.dart';
+import 'package:trimly/domain/engines/optimizer_service.dart';
 import 'package:trimly/features/shared/demo_data.dart';
 import 'package:trimly/features/shared/trimly_components.dart';
 import 'package:trimly/services/user_settings/user_settings_provider.dart';
@@ -13,16 +12,23 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settingsAsync = ref.watch(userSettingsProvider);
-    final subscriptions = demoSubscriptions(
-      currency: Currency.inr,
-    );
 
     return settingsAsync.when(
       data: (settings) {
+        final subscriptions = demoSubscriptions(currency: settings.currency);
         final amount = subscriptions.fold<double>(
           0,
           (total, subscription) => total + subscription.price,
         );
+        final optimizerResult = OptimizerService().optimize(
+          subscriptions: subscriptions,
+          target: demoSavingsTarget,
+        );
+        final representativeStatus = subscriptions.first.decisionStatus;
+        final recommendationText = optimizerResult.recommendedPlan != null
+            ? optimizerResult.recommendedPlan!.explanation.selectedSubscriptionNames
+                .join(', ')
+            : optimizerResult.explanation;
 
         return CustomScrollView(
           slivers: [
@@ -73,13 +79,9 @@ class HomeScreen extends ConsumerWidget {
                               runSpacing: 8,
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
-                                StatusBadge(
-                                  status: settings.currency == Currency.inr
-                                      ? DecisionStatus.keep
-                                      : DecisionStatus.review,
-                                ),
+                                StatusBadge(status: representativeStatus),
                                 Text(
-                                  '4 active subscriptions',
+                                  '${subscriptions.length} active subscriptions',
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ],
@@ -122,6 +124,7 @@ class HomeScreen extends ConsumerWidget {
                             ),
                             child: SubscriptionSummaryCard(
                               subscription: subscription,
+                              currency: settings.currency,
                               trailing: const Icon(Icons.chevron_right),
                             ),
                           ),
@@ -162,7 +165,7 @@ class HomeScreen extends ConsumerWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Keep Gym. Cancel Netflix + Canva.',
+                                  recommendationText,
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ],
