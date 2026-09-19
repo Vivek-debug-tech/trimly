@@ -436,6 +436,65 @@ Currency & Internationalization Amendment v1
 Phase 5 UI/UX Specification  
 **STATUS: FROZEN**
 
+## PHASE 6A - REVENUECAT FOUNDATION
+
+### Scope
+
+Phase 6A implements only the RevenueCat entitlement foundation. It does not add paywall UI, purchase UI, offerings, feature gating, notifications, backend services, authentication, cloud sync, or Hive persistence for entitlement state.
+
+### Dependency and Configuration
+
+- Added `purchases_flutter: ^10.13.1`.
+- The public SDK key is read from the compile-time `REVENUECAT_PUBLIC_API_KEY` environment value.
+- No key is committed to the repository. If the key is absent, the service publishes an error state and does not claim Pro access.
+
+### Reactive Architecture
+
+```text
+RevenueCat SDK
+	-> RevenueCatService
+	-> CustomerInfo mapping
+	-> premiumProvider
+	-> future UI
+```
+
+`RevenueCatConstants.proEntitlementId` is the single entitlement identifier: `pro`. `RevenueCatService` configures the SDK once, retrieves initial CustomerInfo, registers `addCustomerInfoUpdateListener`, maps every update, and exposes transient entitlement state through the existing Riverpod boundary. The listener can be removed through service disposal.
+
+`premiumProvider` is the one application-level Pro state source. It is a reactive `NotifierProvider` backed by `EntitlementState`; no second entitlement provider was added.
+
+### Entitlement and Error State
+
+The application-level state is intentionally small:
+
+- `loading`
+- `free`
+- `pro`
+- `error` with a UI-safe message
+
+Pro is granted only when `CustomerInfo.entitlements.all['pro']?.isActive == true`. No local boolean, SharedPreferences value, Hive value, UserSettings field, or purchase history is used as the source of truth. Missing configuration or SDK initialization failure remains an error and never grants Pro.
+
+### Initialization Boundary
+
+`main.dart` calls `WidgetsFlutterBinding.ensureInitialized()`, initializes the singleton `RevenueCatService` once, and then starts the existing `ProviderScope` and app. Individual screens do not initialize RevenueCat, and no polling timer was added.
+
+### Tests
+
+`test/services/revenuecat/revenuecat_service_test.dart` contains 9 focused tests covering free mapping, active Pro mapping, inactive Pro mapping, other/empty entitlement behavior at the pure mapping boundary, deterministic repeated transitions, initial loading state, safe error state, and missing configuration handling.
+
+### Files Created or Modified
+
+- `lib/services/revenuecat/revenuecat_config.dart`
+- `lib/services/revenuecat/entitlement_state.dart`
+- `lib/services/revenuecat/revenuecat_service.dart`
+- `lib/services/revenuecat/premium_provider.dart`
+- `lib/main.dart`
+- `test/services/revenuecat/revenuecat_service_test.dart`
+- `pubspec.yaml` and `pubspec.lock`
+
+### Explicit Non-Goals
+
+No purchase flow, paywall, offerings, Customer Center, premium feature gating, UI changes, Hive changes, UserSettings changes, Decision Engine changes, Optimizer changes, currency logic changes, notifications, backend, authentication, or cloud sync were implemented.
+
 ## PHASE 5 VISUAL DESIGN SPECIFICATION
 
 **STATUS: FROZEN**
