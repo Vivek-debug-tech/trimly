@@ -4,13 +4,7 @@ import '../models/subscription.dart';
 class MonthlySavingsCalculator {
   const MonthlySavingsCalculator();
 
-  static const supportedCurrency = 'INR';
-
   double? calculate(Subscription subscription) {
-    if (subscription.currency != supportedCurrency) {
-      return null;
-    }
-
     final savingsBasis = subscription.trialEndDate != null
         ? subscription.postTrialPrice
         : subscription.price;

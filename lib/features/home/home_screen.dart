@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:trimly/core/utils/currency_formatter.dart';
+import 'package:trimly/domain/engines/monthly_savings_calculator.dart';
 import 'package:trimly/domain/engines/optimizer_service.dart';
 import 'package:trimly/features/shared/demo_data.dart';
 import 'package:trimly/features/shared/trimly_components.dart';
@@ -16,15 +17,16 @@ class HomeScreen extends ConsumerWidget {
     return settingsAsync.when(
       data: (settings) {
         final subscriptions = demoSubscriptions(currency: settings.currency);
+        const savingsCalculator = MonthlySavingsCalculator();
         final amount = subscriptions.fold<double>(
           0,
-          (total, subscription) => total + subscription.price,
+          (total, subscription) =>
+              total + (savingsCalculator.calculate(subscription) ?? 0),
         );
         final optimizerResult = OptimizerService().optimize(
           subscriptions: subscriptions,
           target: demoSavingsTarget,
         );
-        final representativeStatus = subscriptions.first.decisionStatus;
         final recommendationText = optimizerResult.recommendedPlan != null
             ? optimizerResult.recommendedPlan!.explanation.selectedSubscriptionNames
                 .join(', ')
@@ -79,7 +81,6 @@ class HomeScreen extends ConsumerWidget {
                               runSpacing: 8,
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
-                                StatusBadge(status: representativeStatus),
                                 Text(
                                   '${subscriptions.length} active subscriptions',
                                   style: Theme.of(context).textTheme.bodyMedium,

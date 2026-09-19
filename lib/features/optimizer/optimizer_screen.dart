@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:trimly/core/enums/currency.dart';
 import 'package:trimly/core/utils/currency_formatter.dart';
 import 'package:trimly/domain/engines/optimizer_service.dart';
+import 'package:trimly/domain/models/optimizer_models.dart';
 import 'package:trimly/features/shared/demo_data.dart';
 import 'package:trimly/features/shared/trimly_components.dart';
 import 'package:trimly/services/user_settings/user_settings_provider.dart';
@@ -30,9 +32,10 @@ class _OptimizerScreenState extends ConsumerState<OptimizerScreen> {
         final recommendedPlan = optimizerResult.recommendedPlan;
         final recommendedNames = recommendedPlan?.explanation.selectedSubscriptionNames ?? const [];
         final recommendedSaving = recommendedPlan?.monthlySavings ?? 0.0;
-        final obviousGuess = optimizerResult.alternatives.isNotEmpty
-            ? optimizerResult.alternatives.first.monthlySavings
-            : recommendedSaving;
+        final naiveResult = NaiveBaselineService().recommend(
+          subscriptions: subscriptions,
+          target: demoSavingsTarget,
+        );
 
         return Scaffold(
           backgroundColor: const Color(0xFFF5F7F7),
@@ -88,8 +91,7 @@ class _OptimizerScreenState extends ConsumerState<OptimizerScreen> {
                                 )
                               : _buildObviousGuessCard(
                                   context,
-                                  obviousGuess,
-                                  optimizerResult.alternatives,
+                                  naiveResult,
                                   settings.currency,
                                 ),
                         ),
@@ -141,13 +143,12 @@ class _OptimizerScreenState extends ConsumerState<OptimizerScreen> {
 
   Widget _buildObviousGuessCard(
     BuildContext context,
-    double value,
-    List<dynamic> alternatives,
-    dynamic currency,
+    NaiveBaselineResult result,
+    Currency currency,
   ) {
-    final label = alternatives.isNotEmpty
-        ? alternatives.first.explanation.selectedSubscriptionNames.join(' + ')
-        : 'No alternative plan available';
+    final label = result.hasValidPlan
+        ? result.selectedSubscriptions.map((item) => item.name).join(' + ')
+        : 'No valid baseline plan';
 
     return Container(
       key: const ValueKey('obvious_guess'),
@@ -161,7 +162,7 @@ class _OptimizerScreenState extends ConsumerState<OptimizerScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Best currently available plan',
+            'Obvious Guess',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: const Color(0xFF607578),
             ),
@@ -178,7 +179,7 @@ class _OptimizerScreenState extends ConsumerState<OptimizerScreen> {
                 ),
               ),
               Text(
-                CurrencyFormatter.format(value, currency),
+                CurrencyFormatter.format(result.monthlySavings, currency),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Colors.grey.shade600,
                 ),
@@ -195,7 +196,7 @@ class _OptimizerScreenState extends ConsumerState<OptimizerScreen> {
     double value,
     List<String> selectedNames,
     String explanation,
-    dynamic currency,
+    Currency currency,
   ) {
     final planLabel = selectedNames.isEmpty ? 'No eligible savings plan' : selectedNames.join(' + ');
 
