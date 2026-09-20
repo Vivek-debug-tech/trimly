@@ -553,3 +553,31 @@ Currency & Internationalization Amendment v1
 
 Phase 5 UI/UX Specification  
 **STATUS: FROZEN**
+
+## PHASE 6B - REVENUECAT OFFERINGS & PURCHASES
+
+### Objective
+
+Implement the service and domain foundations for fetching RevenueCat offerings, purchasing packages, and restoring purchases, strictly decoupling the presentation logic from the actual SDK structures.
+
+### What Was Implemented
+
+- A minimal `PurchasesInterface` abstraction around the `purchases_flutter` SDK to cleanly separate the static globals and permit rigorous isolated unit testing.
+- A streamlined `TrimlyOfferings` domain model yielding exactly `monthly`, `yearly`, and `lifetime` packages.
+- `RevenueCatService` functionality handling `fetchOfferings()`, `purchasePackage()`, and `restorePurchases()`.
+- Safe error handling discarding non-fatal cancellation events (`PurchasesErrorCode.purchaseCancelledError`).
+- Exposing actions directly from `premiumProvider` for future UI linkages.
+
+### Source of Truth Contract
+
+`CustomerInfo` returned by RevenueCat remains the absolute source of truth. Post-purchase or post-restore `CustomerInfo` instances naturally route into the pre-existing pure `EntitlementMapper` which validates against the canonical `trimly_pro` configuration.
+
+No offline UI booleans, simulated premium states, or manual local flags were established.
+
+### Tests Added
+
+`test/services/revenuecat/revenuecat_service_test.dart` cleanly integrates `FakePurchases` allowing strict monitoring of product identifer mapping routines natively. Validation incorporates verifying mapping transitions, managing absent packages responsibly, handling invalid current offerings, and ignoring mocked API cancellation crashes reliably.
+
+### Explicit Non-Goals
+
+No paywall layouts, presentational UI features, RevenueCat user interfacing dialogs, network dependencies, cloud backends, Customer center logic, or legacy structural modifications.
