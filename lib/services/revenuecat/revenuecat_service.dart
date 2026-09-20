@@ -106,11 +106,20 @@ class RevenueCatService {
   Package? _yearlyCache;
   Package? _lifetimeCache;
 
+  void _clearCache() {
+    _monthlyCache = null;
+    _yearlyCache = null;
+    _lifetimeCache = null;
+  }
+
   Future<TrimlyOfferings?> fetchOfferings() async {
     try {
       final offerings = await _purchases.getOfferings();
       final current = offerings.current;
-      if (current == null) return null;
+      if (current == null) {
+        _clearCache();
+        return null;
+      }
 
       Package? findPackage(String id) {
         try {
@@ -140,6 +149,7 @@ class RevenueCatService {
         lifetime: mapPackage(_lifetimeCache, TrimlyPlan.lifetime),
       );
     } catch (_) {
+      _clearCache();
       return null;
     }
   }

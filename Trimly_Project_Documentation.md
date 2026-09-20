@@ -564,7 +564,7 @@ Implement the service and domain foundations for fetching RevenueCat offerings, 
 
 - A minimal `PurchasesInterface` abstraction around the `purchases_flutter` SDK to cleanly separate the static globals and permit rigorous isolated unit testing.
 - A streamlined `TrimlyOfferings` domain model yielding exactly `monthly`, `yearly`, and `lifetime` packages.
-- `RevenueCatService` functionality handling `fetchOfferings()`, `purchasePackage()`, and `restorePurchases()`.
+- `RevenueCatService` functionality handling `fetchOfferings()`, `purchase(TrimlyPlan)`, and `restorePurchases()`.
 - Safe error handling discarding non-fatal cancellation events (`PurchasesErrorCode.purchaseCancelledError`).
 - Exposing actions directly from `premiumProvider` for future UI linkages.
 
@@ -576,7 +576,7 @@ No offline UI booleans, simulated premium states, or manual local flags were est
 
 ### Tests Added
 
-`test/services/revenuecat/revenuecat_service_test.dart` cleanly integrates `FakePurchases` allowing strict monitoring of product identifer mapping routines natively. Validation incorporates verifying mapping transitions, managing absent packages responsibly, handling invalid current offerings, and ignoring mocked API cancellation crashes reliably.
+`test/services/revenuecat/revenuecat_service_test.dart` cleanly integrates `FakePurchases` allowing strict monitoring of product identifier mapping routines natively. Validation incorporates verifying mapping transitions, managing absent packages responsibly, handling invalid current offerings, and ignoring mocked API cancellation crashes reliably.
 
 ### Explicit Non-Goals
 

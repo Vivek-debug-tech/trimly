@@ -79,6 +79,7 @@ class FakePurchases implements PurchasesInterface {
   Offerings? mockOfferings;
   Exception? purchaseException;
   Exception? restoreException;
+  Package? capturedPurchasePackage;
 
   @override
   Future<void> configure(PurchasesConfiguration configuration) async {}
@@ -105,6 +106,7 @@ class FakePurchases implements PurchasesInterface {
 
   @override
   Future<PurchaseResult> purchasePackage(Package package) async {
+    capturedPurchasePackage = package;
     if (purchaseException != null) throw purchaseException!;
     return MockPurchaseResult(mockCustomerInfo!);
   }
@@ -141,6 +143,37 @@ void main() {
 
       expect(state.status, EntitlementStatus.free);
       expect(state.isPro, isFalse);
+    });
+
+    test('deterministic repeated entitlement mapping', () {
+      final statuses = [
+        EntitlementMapper.fromProEntitlementActive(true).status,
+        EntitlementMapper.fromProEntitlementActive(false).status,
+        EntitlementMapper.fromProEntitlementActive(true).status,
+      ];
+
+      expect(statuses, [
+        EntitlementStatus.pro,
+        EntitlementStatus.free,
+        EntitlementStatus.pro,
+      ]);
+    });
+
+    test('other active entitlements do not grant Pro', () {
+      final customerInfo = MockCustomerInfo(false);
+      final state = EntitlementMapper.fromCustomerInfo(customerInfo);
+
+      expect(state.status, EntitlementStatus.free);
+      expect(state.isPro, isFalse);
+    });
+
+    test('initialization error does not grant Pro and yields safe error state', () async {
+      final service = RevenueCatService(apiKey: '');
+      final state = await service.initialize();
+      expect(state.status, EntitlementStatus.error);
+      expect(state.isPro, isFalse);
+      expect(state.errorMessage, isNotNull);
+      service.dispose();
     });
   });
 
@@ -193,7 +226,7 @@ void main() {
       service.dispose();
     });
 
-    test('missing missing packages map to null Trimly plans securely', () async {
+    test('missing packages map to null Trimly plans securely', () async {
       fakePurchases.mockOfferings = MockOfferings(
         current: MockOffering(
           monthly: null,
@@ -238,6 +271,37 @@ void main() {
 
       expect(status, PurchaseResultStatus.success);
       expect(service.currentState.isPro, isTrue); // Directly mutated the internal state properly
+
+      service.dispose();
+    });
+
+    test('purchase verifies TrimlyPlan maps to target RevenueCat wrapper properly', () async {
+      final monthlyPkg = MockPackage('monthly_pkg', '1.99');
+      final yearlyPkg = MockPackage('yearly_pkg', '19.99');
+      final lifetimePkg = MockPackage('lifetime_pkg', '49.99');
+
+      fakePurchases.mockOfferings = MockOfferings(
+        current: MockOffering(
+          monthly: monthlyPkg,
+          annual: yearlyPkg,
+          lifetime: lifetimePkg,
+          availablePackages: [monthlyPkg, yearlyPkg, lifetimePkg],
+        ),
+      );
+
+      final service = RevenueCatService(apiKey: 'test', purchases: fakePurchases);
+      fakePurchases.mockCustomerInfo = MockCustomerInfo(true);
+      await service.initialize();
+      await service.fetchOfferings();
+
+      await service.purchase(TrimlyPlan.monthly);
+      expect(fakePurchases.capturedPurchasePackage, monthlyPkg);
+
+      await service.purchase(TrimlyPlan.yearly);
+      expect(fakePurchases.capturedPurchasePackage, yearlyPkg);
+
+      await service.purchase(TrimlyPlan.lifetime);
+      expect(fakePurchases.capturedPurchasePackage, lifetimePkg);
 
       service.dispose();
     });
