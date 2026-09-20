@@ -1,8 +1,0 @@
-﻿ M Trimly_Project_Documentation.html
- M Trimly_Project_Documentation.md
- M lib/services/revenuecat/revenuecat_service.dart
- M macos/Flutter/GeneratedPluginRegistrant.swift
- M test/services/revenuecat/revenuecat_service_test.dart
-?? check.txt
-?? exitcode.txt
-?? status.txt
