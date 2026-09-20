@@ -24,5 +24,6 @@ class PremiumController extends Notifier<EntitlementState> {
   Future<PurchaseResultStatus> purchase(TrimlyPlan plan) =>
       RevenueCatService.instance.purchase(plan);
 
-  Future<RestoreResultStatus> restore() => RevenueCatService.instance.restorePurchases();
+  Future<RestoreResultStatus> restore() =>
+      RevenueCatService.instance.restorePurchases();
 }

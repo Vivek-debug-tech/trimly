@@ -19,8 +19,8 @@ class MockEntitlementInfos extends Fake implements EntitlementInfos {
   final bool isActive;
   @override
   Map<String, EntitlementInfo> get all => {
-        if (isActive) 'trimly_pro': MockEntitlementInfo(true),
-      };
+    if (isActive) 'trimly_pro': MockEntitlementInfo(true),
+  };
 }
 
 class MockEntitlementInfo extends Fake implements EntitlementInfo {
@@ -167,14 +167,17 @@ void main() {
       expect(state.isPro, isFalse);
     });
 
-    test('initialization error does not grant Pro and yields safe error state', () async {
-      final service = RevenueCatService(apiKey: '');
-      final state = await service.initialize();
-      expect(state.status, EntitlementStatus.error);
-      expect(state.isPro, isFalse);
-      expect(state.errorMessage, isNotNull);
-      service.dispose();
-    });
+    test(
+      'initialization error does not grant Pro and yields safe error state',
+      () async {
+        final service = RevenueCatService(apiKey: '');
+        final state = await service.initialize();
+        expect(state.status, EntitlementStatus.error);
+        expect(state.isPro, isFalse);
+        expect(state.errorMessage, isNotNull);
+        service.dispose();
+      },
+    );
   });
 
   group('EntitlementState', () {
@@ -194,37 +197,43 @@ void main() {
       fakePurchases = FakePurchases();
     });
 
-    test('fetchOfferings maps current offering to TrimlyOfferings safely', () async {
-      final monthlyPkg = MockPackage('monthly_pkg', '1.99');
-      final yearlyPkg = MockPackage('yearly_pkg', '19.99');
-      final lifetimePkg = MockPackage('lifetime_pkg', '49.99');
+    test(
+      'fetchOfferings maps current offering to TrimlyOfferings safely',
+      () async {
+        final monthlyPkg = MockPackage('monthly_pkg', '1.99');
+        final yearlyPkg = MockPackage('yearly_pkg', '19.99');
+        final lifetimePkg = MockPackage('lifetime_pkg', '49.99');
 
-      fakePurchases.mockOfferings = MockOfferings(
-        current: MockOffering(
-          monthly: monthlyPkg,
-          annual: yearlyPkg,
-          lifetime: lifetimePkg,
-          availablePackages: [monthlyPkg, yearlyPkg, lifetimePkg],
-        ),
-      );
+        fakePurchases.mockOfferings = MockOfferings(
+          current: MockOffering(
+            monthly: monthlyPkg,
+            annual: yearlyPkg,
+            lifetime: lifetimePkg,
+            availablePackages: [monthlyPkg, yearlyPkg, lifetimePkg],
+          ),
+        );
 
-      final service = RevenueCatService(apiKey: 'test', purchases: fakePurchases);
-      fakePurchases.mockCustomerInfo = MockCustomerInfo(false);
-      await service.initialize();
+        final service = RevenueCatService(
+          apiKey: 'test',
+          purchases: fakePurchases,
+        );
+        fakePurchases.mockCustomerInfo = MockCustomerInfo(false);
+        await service.initialize();
 
-      final offerings = await service.fetchOfferings();
-      expect(offerings, isNotNull);
-      expect(offerings!.monthly?.plan, TrimlyPlan.monthly);
-      expect(offerings.monthly?.priceString, '1.99');
+        final offerings = await service.fetchOfferings();
+        expect(offerings, isNotNull);
+        expect(offerings!.monthly?.plan, TrimlyPlan.monthly);
+        expect(offerings.monthly?.priceString, '1.99');
 
-      expect(offerings.yearly?.plan, TrimlyPlan.yearly);
-      expect(offerings.yearly?.priceString, '19.99');
+        expect(offerings.yearly?.plan, TrimlyPlan.yearly);
+        expect(offerings.yearly?.priceString, '19.99');
 
-      expect(offerings.lifetime?.plan, TrimlyPlan.lifetime);
-      expect(offerings.lifetime?.priceString, '49.99');
+        expect(offerings.lifetime?.plan, TrimlyPlan.lifetime);
+        expect(offerings.lifetime?.priceString, '49.99');
 
-      service.dispose();
-    });
+        service.dispose();
+      },
+    );
 
     test('missing packages map to null Trimly plans securely', () async {
       fakePurchases.mockOfferings = MockOfferings(
@@ -236,107 +245,131 @@ void main() {
         ),
       );
 
-      final service = RevenueCatService(apiKey: 'test', purchases: fakePurchases);
+      final service = RevenueCatService(
+        apiKey: 'test',
+        purchases: fakePurchases,
+      );
       fakePurchases.mockCustomerInfo = MockCustomerInfo(false);
       await service.initialize();
 
       final offerings = await service.fetchOfferings();
       expect(offerings!.monthly, isNull);
-      expect(offerings. yearly, isNull);
+      expect(offerings.yearly, isNull);
       expect(offerings.lifetime, isNull);
 
       service.dispose();
     });
 
-    test('purchase evaluates correctly to success and maps to SOT immediately', () async {
-      final monthlyPkg = MockPackage('monthly_pkg', '1.99');
-      fakePurchases.mockOfferings = MockOfferings(
-        current: MockOffering(
-          monthly: monthlyPkg,
-          annual: null,
-          lifetime: null,
-          availablePackages: [monthlyPkg],
-        ),
-      );
+    test(
+      'purchase evaluates correctly to success and maps to SOT immediately',
+      () async {
+        final monthlyPkg = MockPackage('monthly_pkg', '1.99');
+        fakePurchases.mockOfferings = MockOfferings(
+          current: MockOffering(
+            monthly: monthlyPkg,
+            annual: null,
+            lifetime: null,
+            availablePackages: [monthlyPkg],
+          ),
+        );
 
-      fakePurchases.mockCustomerInfo = MockCustomerInfo(false);
-      final service = RevenueCatService(apiKey: 'test', purchases: fakePurchases);
-      await service.initialize();
+        fakePurchases.mockCustomerInfo = MockCustomerInfo(false);
+        final service = RevenueCatService(
+          apiKey: 'test',
+          purchases: fakePurchases,
+        );
+        await service.initialize();
 
-      // Prerequisite caching operation
-      await service.fetchOfferings();
+        // Prerequisite caching operation
+        await service.fetchOfferings();
 
-      fakePurchases.mockCustomerInfo = MockCustomerInfo(true); // Grant Pro!
-      final status = await service.purchase(TrimlyPlan.monthly);
+        fakePurchases.mockCustomerInfo = MockCustomerInfo(true); // Grant Pro!
+        final status = await service.purchase(TrimlyPlan.monthly);
 
-      expect(status, PurchaseResultStatus.success);
-      expect(service.currentState.isPro, isTrue); // Directly mutated the internal state properly
+        expect(status, PurchaseResultStatus.success);
+        expect(
+          service.currentState.isPro,
+          isTrue,
+        ); // Directly mutated the internal state properly
 
-      service.dispose();
-    });
+        service.dispose();
+      },
+    );
 
-    test('purchase verifies TrimlyPlan maps to target RevenueCat wrapper properly', () async {
-      final monthlyPkg = MockPackage('monthly_pkg', '1.99');
-      final yearlyPkg = MockPackage('yearly_pkg', '19.99');
-      final lifetimePkg = MockPackage('lifetime_pkg', '49.99');
+    test(
+      'purchase verifies TrimlyPlan maps to target RevenueCat wrapper properly',
+      () async {
+        final monthlyPkg = MockPackage('monthly_pkg', '1.99');
+        final yearlyPkg = MockPackage('yearly_pkg', '19.99');
+        final lifetimePkg = MockPackage('lifetime_pkg', '49.99');
 
-      fakePurchases.mockOfferings = MockOfferings(
-        current: MockOffering(
-          monthly: monthlyPkg,
-          annual: yearlyPkg,
-          lifetime: lifetimePkg,
-          availablePackages: [monthlyPkg, yearlyPkg, lifetimePkg],
-        ),
-      );
+        fakePurchases.mockOfferings = MockOfferings(
+          current: MockOffering(
+            monthly: monthlyPkg,
+            annual: yearlyPkg,
+            lifetime: lifetimePkg,
+            availablePackages: [monthlyPkg, yearlyPkg, lifetimePkg],
+          ),
+        );
 
-      final service = RevenueCatService(apiKey: 'test', purchases: fakePurchases);
-      fakePurchases.mockCustomerInfo = MockCustomerInfo(true);
-      await service.initialize();
-      await service.fetchOfferings();
+        final service = RevenueCatService(
+          apiKey: 'test',
+          purchases: fakePurchases,
+        );
+        fakePurchases.mockCustomerInfo = MockCustomerInfo(true);
+        await service.initialize();
+        await service.fetchOfferings();
 
-      await service.purchase(TrimlyPlan.monthly);
-      expect(fakePurchases.capturedPurchasePackage, monthlyPkg);
+        await service.purchase(TrimlyPlan.monthly);
+        expect(fakePurchases.capturedPurchasePackage, monthlyPkg);
 
-      await service.purchase(TrimlyPlan.yearly);
-      expect(fakePurchases.capturedPurchasePackage, yearlyPkg);
+        await service.purchase(TrimlyPlan.yearly);
+        expect(fakePurchases.capturedPurchasePackage, yearlyPkg);
 
-      await service.purchase(TrimlyPlan.lifetime);
-      expect(fakePurchases.capturedPurchasePackage, lifetimePkg);
+        await service.purchase(TrimlyPlan.lifetime);
+        expect(fakePurchases.capturedPurchasePackage, lifetimePkg);
 
-      service.dispose();
-    });
+        service.dispose();
+      },
+    );
 
-    test('purchase safely relays cancellation status identically without crashing', () async {
-       final monthlyPkg = MockPackage('monthly_pkg', '1.99');
-      fakePurchases.mockOfferings = MockOfferings(
-        current: MockOffering(
-          monthly: monthlyPkg,
-          annual: null,
-          lifetime: null,
-          availablePackages: [monthlyPkg],
-        ),
-      );
+    test(
+      'purchase safely relays cancellation status identically without crashing',
+      () async {
+        final monthlyPkg = MockPackage('monthly_pkg', '1.99');
+        fakePurchases.mockOfferings = MockOfferings(
+          current: MockOffering(
+            monthly: monthlyPkg,
+            annual: null,
+            lifetime: null,
+            availablePackages: [monthlyPkg],
+          ),
+        );
 
-      fakePurchases.mockCustomerInfo = MockCustomerInfo(false);
-      fakePurchases.purchaseException = PlatformException(
-        code: '1', // PurchasesErrorCode.purchaseCancelledError is 1
-        message: 'Cancelled',
-      );
+        fakePurchases.mockCustomerInfo = MockCustomerInfo(false);
+        fakePurchases.purchaseException = PlatformException(
+          code: '1', // PurchasesErrorCode.purchaseCancelledError is 1
+          message: 'Cancelled',
+        );
 
-      final service = RevenueCatService(apiKey: 'test', purchases: fakePurchases);
-      await service.initialize();
-      await service.fetchOfferings();
+        final service = RevenueCatService(
+          apiKey: 'test',
+          purchases: fakePurchases,
+        );
+        await service.initialize();
+        await service.fetchOfferings();
 
-      final status = await service.purchase(TrimlyPlan.monthly);
+        final status = await service.purchase(TrimlyPlan.monthly);
 
-      expect(status, PurchaseResultStatus.cancelled);
-      expect(service.currentState.isPro, isFalse);
+        expect(status, PurchaseResultStatus.cancelled);
+        expect(service.currentState.isPro, isFalse);
 
-      service.dispose();
-    });
+        service.dispose();
+      },
+    );
 
     test('purchase captures explicit hard errors safely', () async {
-       final monthlyPkg = MockPackage('monthly_pkg', '1.99');
+      final monthlyPkg = MockPackage('monthly_pkg', '1.99');
       fakePurchases.mockOfferings = MockOfferings(
         current: MockOffering(
           monthly: monthlyPkg,
@@ -349,7 +382,10 @@ void main() {
       fakePurchases.mockCustomerInfo = MockCustomerInfo(false);
       fakePurchases.purchaseException = Exception('Unexpected Hard Crash');
 
-      final service = RevenueCatService(apiKey: 'test', purchases: fakePurchases);
+      final service = RevenueCatService(
+        apiKey: 'test',
+        purchases: fakePurchases,
+      );
       await service.initialize();
       await service.fetchOfferings();
 
@@ -360,25 +396,34 @@ void main() {
       service.dispose();
     });
 
-    test('restore processes CustomerInfo immediately yielding success', () async {
-      fakePurchases.mockCustomerInfo = MockCustomerInfo(false);
-      final service = RevenueCatService(apiKey: 'test', purchases: fakePurchases);
-      await service.initialize();
+    test(
+      'restore processes CustomerInfo immediately yielding success',
+      () async {
+        fakePurchases.mockCustomerInfo = MockCustomerInfo(false);
+        final service = RevenueCatService(
+          apiKey: 'test',
+          purchases: fakePurchases,
+        );
+        await service.initialize();
 
-      expect(service.currentState.isPro, isFalse);
+        expect(service.currentState.isPro, isFalse);
 
-      fakePurchases.mockCustomerInfo = MockCustomerInfo(true);
-      final status = await service.restorePurchases();
+        fakePurchases.mockCustomerInfo = MockCustomerInfo(true);
+        final status = await service.restorePurchases();
 
-      expect(status, RestoreResultStatus.success);
-      expect(service.currentState.isPro, isTrue);
+        expect(status, RestoreResultStatus.success);
+        expect(service.currentState.isPro, isTrue);
 
-      service.dispose();
-    });
+        service.dispose();
+      },
+    );
 
     test('restore smoothly catches explicit network errors', () async {
       fakePurchases.mockCustomerInfo = MockCustomerInfo(false);
-      final service = RevenueCatService(apiKey: 'test', purchases: fakePurchases);
+      final service = RevenueCatService(
+        apiKey: 'test',
+        purchases: fakePurchases,
+      );
       await service.initialize();
 
       fakePurchases.restoreException = Exception('No Connection');

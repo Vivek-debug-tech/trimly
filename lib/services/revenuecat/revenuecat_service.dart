@@ -33,8 +33,8 @@ class EntitlementMapper {
 
 class RevenueCatService {
   RevenueCatService({String? apiKey, PurchasesInterface? purchases})
-      : _apiKey = apiKey,
-        _purchases = purchases ?? const DefaultPurchases();
+    : _apiKey = apiKey,
+      _purchases = purchases ?? const DefaultPurchases();
 
   static final instance = RevenueCatService();
 
