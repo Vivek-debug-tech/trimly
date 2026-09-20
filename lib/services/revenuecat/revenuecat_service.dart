@@ -8,7 +8,7 @@ import 'revenuecat_config.dart';
 class RevenueCatConstants {
   const RevenueCatConstants._();
 
-  static const proEntitlementId = 'pro';
+  static const proEntitlementId = 'trimly_pro';
 }
 
 class EntitlementMapper {

@@ -1,0 +1,19 @@
+﻿git : warning: in the 
+working copy of 'macos/Flutte
+r/GeneratedPluginRegistrant.s
+wift', LF will be replaced 
+by CRLF the next time Git 
+touches it
+At line:1 char:1
++ git diff --check *>&1 | 
+Out-File -Encoding utf8 
+check.txt; echo $LAST ...
++ ~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (warning  
+  : in the... Git touches    
+ it:String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
