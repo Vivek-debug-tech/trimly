@@ -458,7 +458,7 @@ RevenueCat SDK
 	-> future UI
 ```
 
-`RevenueCatConstants.proEntitlementId` is the single entitlement identifier: `pro`. `RevenueCatService` configures the SDK once, retrieves initial CustomerInfo, registers `addCustomerInfoUpdateListener`, maps every update, and exposes transient entitlement state through the existing Riverpod boundary. The listener can be removed through service disposal.
+`RevenueCatConstants.proEntitlementId` is the single entitlement identifier: `trimly_pro`. `RevenueCatService` configures the SDK once, retrieves initial CustomerInfo, registers `addCustomerInfoUpdateListener`, maps every update, and exposes transient entitlement state through the existing Riverpod boundary. The listener can be removed through service disposal.
 
 `premiumProvider` is the one application-level Pro state source. It is a reactive `NotifierProvider` backed by `EntitlementState`; no second entitlement provider was added.
 
@@ -471,7 +471,7 @@ The application-level state is intentionally small:
 - `pro`
 - `error` with a UI-safe message
 
-Pro is granted only when `CustomerInfo.entitlements.all['pro']?.isActive == true`. No local boolean, SharedPreferences value, Hive value, UserSettings field, or purchase history is used as the source of truth. Missing configuration or SDK initialization failure remains an error and never grants Pro.
+Pro is granted only when `CustomerInfo.entitlements.all['trimly_pro']?.isActive == true`. No local boolean, SharedPreferences value, Hive value, UserSettings field, or purchase history is used as the source of truth. Missing configuration or SDK initialization failure remains an error and never grants Pro.
 
 ### Initialization Boundary
 

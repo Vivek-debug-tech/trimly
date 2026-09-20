@@ -4,6 +4,10 @@ import 'package:trimly/services/revenuecat/entitlement_state.dart';
 import 'package:trimly/services/revenuecat/revenuecat_service.dart';
 
 void main() {
+  test('uses the configured Trimly Pro entitlement identifier', () {
+    expect(RevenueCatConstants.proEntitlementId, 'trimly_pro');
+  });
+
   group('EntitlementMapper', () {
     test('no pro entitlement produces free state', () {
       final state = EntitlementMapper.fromProEntitlementActive(false);
