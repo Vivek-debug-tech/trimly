@@ -6,6 +6,7 @@ import 'package:trimly/domain/engines/optimizer_service.dart';
 import 'package:trimly/domain/models/optimizer_models.dart';
 import 'package:trimly/features/shared/demo_data.dart';
 import 'package:trimly/features/shared/trimly_components.dart';
+import 'package:trimly/services/revenuecat/premium_provider.dart';
 import 'package:trimly/services/user_settings/user_settings_provider.dart';
 
 class OptimizerScreen extends ConsumerStatefulWidget {
@@ -21,6 +22,7 @@ class _OptimizerScreenState extends ConsumerState<OptimizerScreen> {
   @override
   Widget build(BuildContext context) {
     final settingsAsync = ref.watch(userSettingsProvider);
+    final entState = ref.watch(premiumProvider);
 
     return settingsAsync.when(
       data: (settings) {
@@ -99,8 +101,16 @@ class _OptimizerScreenState extends ConsumerState<OptimizerScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: TrimlyButton(
-                            label: _revealed ? 'Hide recommendation' : 'Reveal Trimly recommendation',
-                            onPressed: () => setState(() => _revealed = !_revealed),
+                            label: _revealed
+                                ? 'Hide recommendation'
+                                : 'Reveal Trimly recommendation',
+                            onPressed: () {
+                              if (!entState.isPro && !_revealed) {
+                                Navigator.of(context).pushNamed('/paywall');
+                                return;
+                              }
+                              setState(() => _revealed = !_revealed);
+                            },
                           ),
                         ),
                         const SizedBox(height: 18),

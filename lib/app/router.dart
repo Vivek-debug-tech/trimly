@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../features/app_shell.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/optimizer/optimizer_screen.dart';
+import '../features/paywall/paywall_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../domain/models/subscription.dart';
 import '../features/renewal_radar/renewal_details_screen.dart';
@@ -82,6 +83,11 @@ class TrimlyRouter {
         return MaterialPageRoute<void>(
           settings: settings,
           builder: (_) => const ProfileScreen(),
+        );
+      case '/paywall':
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (_) => const PaywallScreen(),
         );
       default:
         return MaterialPageRoute<void>(
